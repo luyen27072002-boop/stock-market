@@ -135,12 +135,6 @@ def now_str() -> str:
 
 
 def is_market_scan_time() -> bool:
-    """
-    Auto scan chỉ chạy trong giờ giao dịch Việt Nam:
-    Thứ 2 đến thứ 6, 09:00 đến 14:45.
-
-    Quét thủ công không dùng hàm này, nên giờ nào cũng quét được.
-    """
     now = datetime.now(LOCAL_TZ)
 
     # Thứ 7 = 5, Chủ nhật = 6
@@ -277,9 +271,7 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     c = df["close"]
     v = df["volume"]
 
-    # =========================
     # Candle structure
-    # =========================
     df["range"] = (h - l).replace(0, pd.NA)
     df["body"] = (c - o).abs()
     df["green"] = c > o
@@ -290,9 +282,7 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["close_pos"] = (c - l) / df["range"]
     df["avg_body20"] = df["body"].rolling(20).mean()
 
-    # =========================
     # Volume
-    # =========================
     df["vol20"] = v.rolling(20).mean()
 
     direction = c.diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
@@ -308,47 +298,35 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     mfr = pos_flow / neg_flow.replace(0, math.nan)
     df["mfi14"] = 100 - (100 / (1 + mfr))
 
-    # =========================
     # Trend indicators
-    # =========================
     for n in [5, 10, 20, 50, 100, 200]:
         df[f"sma{n}"] = c.rolling(n).mean()
 
     df["ema12"] = ema(c, 12)
     df["ema26"] = ema(c, 26)
 
-    # =========================
     # MACD
-    # =========================
     df["macd"] = df["ema12"] - df["ema26"]
     df["macd_signal"] = ema(df["macd"], 9)
     df["macd_hist"] = df["macd"] - df["macd_signal"]
 
-    # =========================
     # RSI
-    # =========================
     df["rsi14"] = rsi(c, 14)
 
-    # =========================
     # Bollinger Bands
-    # =========================
     df["bb_mid"] = c.rolling(20).mean()
     bb_std = c.rolling(20).std()
     df["bb_upper"] = df["bb_mid"] + 2 * bb_std
     df["bb_lower"] = df["bb_mid"] - 2 * bb_std
     df["bb_width"] = (df["bb_upper"] - df["bb_lower"]) / df["bb_mid"]
 
-    # =========================
     # Stochastic
-    # =========================
     low14 = l.rolling(14).min()
     high14 = h.rolling(14).max()
     df["stoch_k"] = 100 * (c - low14) / (high14 - low14).replace(0, math.nan)
     df["stoch_d"] = df["stoch_k"].rolling(3).mean()
 
-    # =========================
     # ATR + ADX
-    # =========================
     tr1 = h - l
     tr2 = (h - c.shift()).abs()
     tr3 = (l - c.shift()).abs()
@@ -378,16 +356,12 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["minus_di"] = minus_di
     df["adx14"] = dx.rolling(14).mean()
 
-    # =========================
     # CCI
-    # =========================
     tp_sma = typical.rolling(20).mean()
     mad = (typical - tp_sma).abs().rolling(20).mean()
     df["cci20"] = (typical - tp_sma) / (0.015 * mad.replace(0, math.nan))
 
-    # =========================
     # Williams %R
-    # =========================
     high14 = h.rolling(14).max()
     low14 = l.rolling(14).min()
     df["willr14"] = -100 * (high14 - c) / (high14 - low14).replace(0, math.nan)
@@ -476,9 +450,7 @@ def analyze_full_technical(symbol: str) -> dict:
     low = to_float(latest["low"], price)
     high = to_float(latest["high"], price)
 
-    # =========================
     # BUY SCORE
-    # =========================
     buy_score = 0
     buy_reasons = []
 
@@ -587,9 +559,7 @@ def analyze_full_technical(symbol: str) -> dict:
     if buy_score >= 65:
         buy_zone = [round(min(price, high10), 2), round(price, 2)]
 
-    # =========================
     # SELL SCORE
-    # =========================
     sell_score = 0
     sell_reasons = []
 
@@ -1055,8 +1025,8 @@ async def background_auto_scanner():
             await asyncio.sleep(interval)
             continue
 
-        # Chỉ auto scan trong giờ giao dịch VN
-        # Quét thủ công không bị giới hạn bởi đoạn này
+        # Chỉ auto scan trong giờ giao dịch VN.
+        # Quét thủ công không bị giới hạn bởi đoạn này.
         if not is_market_scan_time():
             STATE["scan_running"] = False
             STATE["last_scan_error"] = (
@@ -1134,32 +1104,49 @@ def firebase_messaging_sw():
     cfg = STATE["config"]
     firebase_config = cfg.get("firebase_web_config", {})
 
+    # Bản này đã sửa lỗi:
+    # "ServiceWorker script evaluation failed"
+    # Nếu Firebase init lỗi, Service Worker vẫn không bị crash toàn bộ.
     js = f"""
-importScripts('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js');
+try {{
+  importScripts('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js');
 
-firebase.initializeApp({json.dumps(firebase_config)});
-const messaging = firebase.messaging();
+  firebase.initializeApp({json.dumps(firebase_config)});
 
-messaging.onBackgroundMessage((payload) => {{
-  const notificationTitle = payload?.notification?.title || 'Stock Alert';
-  const notificationOptions = {{
-    body: payload?.notification?.body || '',
-    icon: '/static/icon-192.png',
-    badge: '/static/icon-192.png',
-    data: payload?.data || {{}}
-  }};
-  self.registration.showNotification(notificationTitle, notificationOptions);
-}});
+  const messaging = firebase.messaging();
+
+  messaging.onBackgroundMessage((payload) => {{
+    const notificationTitle =
+      payload?.notification?.title || 'Stock Alert';
+
+    const notificationOptions = {{
+      body: payload?.notification?.body || '',
+      icon: '/static/icon-192.png',
+      badge: '/static/icon-192.png',
+      data: payload?.data || {{}}
+    }};
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
+  }});
+}} catch (err) {{
+  console.error('firebase-messaging-sw init failed:', err);
+}}
 
 self.addEventListener('notificationclick', function(event) {{
   event.notification.close();
+
   event.waitUntil(
     clients.matchAll({{ type: 'window', includeUncontrolled: true }}).then(function(clientList) {{
       for (const client of clientList) {{
-        if ('focus' in client) return client.focus();
+        if ('focus' in client) {{
+          return client.focus();
+        }}
       }}
-      if (clients.openWindow) return clients.openWindow('/');
+
+      if (clients.openWindow) {{
+        return clients.openWindow('/');
+      }}
     }})
   );
 }});
