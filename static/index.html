@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#111827" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/static/styles.css" />
+  <title>Full Technical Stock Alert</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>Full Technical Alert</h1>
+        <p id="serverStatus">Đang kết nối...</p>
+      </div>
+      <button id="notifyBtn" class="small-btn">Bật thông báo</button>
+    </header>
+
+    <div class="alert-bar">
+      Thuần kỹ thuật: chỉ báo + nến + volume. Không dùng phân tích cơ bản doanh nghiệp.
+    </div>
+
+    <nav class="tabs">
+      <button class="tab active" data-view="buy">Điểm mua</button>
+      <button class="tab" data-view="positions">Đang cầm</button>
+      <button class="tab" data-view="search">Tra mã</button>
+      <button class="tab" data-view="settings">Cài đặt</button>
+    </nav>
+
+    <main>
+      <section id="buy" class="view active">
+        <div class="card">
+          <h2>Điểm mua toàn thị trường</h2>
+          <p class="muted">App tự scan theo nến, volume, MA/EMA, RSI, MACD, Bollinger, Stochastic, ADX, OBV, MFI, CCI, Williams %R.</p>
+          <div class="status-grid">
+            <div><span>Trạng thái</span><b id="autoStatus">-</b></div>
+            <div><span>Lần quét gần nhất</span><b id="lastScan">-</b></div>
+            <div><span>Số lần quét</span><b id="scanCount">-</b></div>
+            <div><span>Lỗi</span><b id="scanError">-</b></div>
+          </div>
+          <button id="manualScanBtn" class="secondary">Quét ngay một lần</button>
+          <button id="clearAlertBtn" class="secondary">Xóa cảnh báo</button>
+        </div>
+
+        <div class="card">
+          <h2>Cảnh báo mới</h2>
+          <div id="alertsList" class="alerts-list">Chưa có cảnh báo.</div>
+        </div>
+
+        <div id="buyResults" class="grid"></div>
+      </section>
+
+      <section id="positions" class="view">
+        <div class="card">
+          <h2>Cổ phiếu tao đang mua/cầm</h2>
+          <p class="muted">Điểm bán/cắt lỗ chỉ báo cho danh sách này. Điểm mua báo toàn thị trường.</p>
+          <div class="row">
+            <input id="posSymbol" placeholder="Mã: HPG" />
+            <input id="posBuyPrice" type="number" step="0.01" placeholder="Giá mua" />
+          </div>
+          <div class="row">
+            <input id="posQty" type="number" step="1" placeholder="Số lượng, nếu muốn" />
+            <input id="posStop" type="number" step="0.01" placeholder="Stop tự đặt, nếu có" />
+          </div>
+          <input id="posNote" placeholder="Ghi chú" />
+          <button id="addPosBtn" class="primary">Thêm vào danh mục</button>
+        </div>
+        <div id="positionResults" class="grid"></div>
+      </section>
+
+      <section id="search" class="view">
+        <div class="card">
+          <h2>Tra kỹ thuật một mã</h2>
+          <p class="muted">Trả về điểm mua/bán theo bộ chỉ báo kỹ thuật + nến + volume.</p>
+          <div class="row">
+            <input id="symbolInput" placeholder="Ví dụ: VND" />
+            <button id="analyzeBtn" class="primary">Phân tích</button>
+          </div>
+        </div>
+        <div id="singleResult"></div>
+      </section>
+
+      <section id="settings" class="view">
+        <div class="card">
+          <h2>Cài đặt auto scan</h2>
+
+          <label class="switch-line">
+            <input id="autoEnabled" type="checkbox" />
+            <span>Bật auto scan nền</span>
+          </label>
+
+          <label>Chu kỳ scan</label>
+          <select id="scanInterval">
+            <option value="10">10 giây, nhanh nhưng nặng</option>
+            <option value="30">30 giây</option>
+            <option value="60">60 giây</option>
+            <option value="120">120 giây</option>
+          </select>
+
+          <label>Điểm mua tối thiểu để báo</label>
+          <select id="minBuyScore">
+            <option value="65">65</option>
+            <option value="70">70</option>
+            <option value="78">78</option>
+            <option value="85">85</option>
+          </select>
+
+          <label>Điểm bán tối thiểu để báo cho danh mục đang cầm</label>
+          <select id="minSellScore">
+            <option value="65">65</option>
+            <option value="70">70</option>
+            <option value="78">78</option>
+            <option value="85">85</option>
+          </select>
+
+          <label>Thời gian chống báo lặp</label>
+          <select id="alertCooldown">
+            <option value="300">5 phút</option>
+            <option value="900">15 phút</option>
+            <option value="1800">30 phút</option>
+            <option value="3600">60 phút</option>
+          </select>
+
+          <label>Danh sách mã để scan điểm mua</label>
+          <textarea id="scanSymbols" rows="8"></textarea>
+
+          <button id="saveSettingsBtn" class="primary">Lưu cài đặt</button>
+          <button id="installBtn" class="secondary">Cài ra màn hình điện thoại</button>
+          <button id="firebasePushBtn" class="primary">Bật Firebase Push thật</button>
+          <button id="testPushBtn" class="secondary">Gửi thử push notification</button>
+
+          <div class="note">
+            Muốn điện thoại đóng app vẫn báo, cần deploy HTTPS và cấu hình Firebase trong config.json.
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
