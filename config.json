@@ -63,16 +63,16 @@
   "max_workers": 8,
   "alert_cooldown_sec": 900,
   "positions": [],
-  "firebase_enabled": false,
-  "firebase_service_account_path": "serviceAccountKey.json",
-  "firebase_vapid_key": "PASTE_YOUR_WEB_PUSH_CERTIFICATE_KEY_PAIR_HERE",
+  "firebase_enabled": true,
+  "firebase_service_account_path": "/etc/secrets/serviceAccountKey.json",
+  "firebase_vapid_key": "BDcx4YI7CrBNmC-PRtECSUHsimGNtKJoBYEqIf89jsq_hYEILtr9rYcfCU7YLMu7EnTgmQt6rbiA926QPv2o-FQ",
   "firebase_web_config": {
-    "apiKey": "PASTE_API_KEY",
-    "authDomain": "PASTE_PROJECT_ID.firebaseapp.com",
-    "projectId": "PASTE_PROJECT_ID",
-    "storageBucket": "PASTE_PROJECT_ID.appspot.com",
-    "messagingSenderId": "PASTE_MESSAGING_SENDER_ID",
-    "appId": "PASTE_APP_ID"
+    "apiKey": "AIzaSyA1b9dq4zVhMd7meJ2dRNeItrK82pPx18k",
+    "authDomain": "stock-market-alert-45134.firebaseapp.com",
+    "projectId": "stock-market-alert-45134",
+    "storageBucket": "stock-market-alert-45134.firebasestorage.app",
+    "messagingSenderId": "268496846888",
+    "appId": "1:268496846888:web:d669bcaf5a5c1e0ea9b51d"
   },
   "fcm_tokens": []
 }
