@@ -60,9 +60,9 @@ def default_config() -> dict:
     return {
         "auto_scan_enabled": True,
         "scan_interval_sec": 10,
-        "min_buy_score": 78,
-        "min_sell_score": 78,
-        "scan_symbols": DEFAULT_SYMBOLS,
+        "min_buy_score": 50,
+        "min_sell_score": 50,
+        "scan_symbols": [],
         "max_workers": 8,
         "alert_cooldown_sec": 900,
         "positions": [],
@@ -956,8 +956,8 @@ def scan_buy_all(symbols: List[str], min_buy_score: int, max_workers: int) -> Li
 
     return [
         x for x in results
-        if x.get("buy_score", 0) >= 60
-    ][:100]
+        if x.get("buy_score", 0) >= 50
+    ][:200]
 
 
 def scan_positions(positions: List[dict], min_sell_score: int, max_workers: int) -> List[dict]:
@@ -1045,17 +1045,26 @@ async def background_auto_scanner():
         STATE["last_scan_error"] = None
 
         try:
+            # Nếu config.json có scan_symbols thì dùng danh sách đó.
+            # Nếu scan_symbols rỗng [] thì tự lấy danh sách mã từ VNDIRECT.
+            scan_symbols = cfg.get("scan_symbols") or get_symbols()
+            scan_symbols = list(dict.fromkeys([
+                str(s).upper().strip()
+                for s in scan_symbols
+                if str(s).strip()
+            ]))[:200]
+
             buy_results = await asyncio.to_thread(
                 scan_buy_all,
-                cfg.get("scan_symbols") or DEFAULT_SYMBOLS,
-                int(cfg.get("min_buy_score", 78)),
+                scan_symbols,
+                int(cfg.get("min_buy_score", 50)),
                 int(cfg.get("max_workers", 8)),
             )
 
             pos_results = await asyncio.to_thread(
                 scan_positions,
                 cfg.get("positions", []),
-                int(cfg.get("min_sell_score", 78)),
+                int(cfg.get("min_sell_score", 50)),
                 int(cfg.get("max_workers", 8)),
             )
 
@@ -1274,15 +1283,24 @@ def api_scan_now():
     """
     cfg = STATE["config"]
 
+    # Nếu config.json có scan_symbols thì dùng danh sách đó.
+    # Nếu scan_symbols rỗng [] thì tự lấy danh sách mã từ VNDIRECT.
+    scan_symbols = cfg.get("scan_symbols") or get_symbols()
+    scan_symbols = list(dict.fromkeys([
+        str(s).upper().strip()
+        for s in scan_symbols
+        if str(s).strip()
+    ]))[:200]
+
     buy_results = scan_buy_all(
-        cfg.get("scan_symbols") or DEFAULT_SYMBOLS,
-        int(cfg.get("min_buy_score", 78)),
+        scan_symbols,
+        int(cfg.get("min_buy_score", 50)),
         int(cfg.get("max_workers", 8)),
     )
 
     pos_results = scan_positions(
         cfg.get("positions", []),
-        int(cfg.get("min_sell_score", 78)),
+        int(cfg.get("min_sell_score", 50)),
         int(cfg.get("max_workers", 8)),
     )
 
@@ -1296,6 +1314,7 @@ def api_scan_now():
         "ok": True,
         "manual_scan": True,
         "time": now_str(),
+        "scan_symbols_count": len(scan_symbols),
         "buy_results": buy_results,
         "position_results": pos_results,
     }
